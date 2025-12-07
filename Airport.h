@@ -279,9 +279,8 @@ public:
 
 
     // Enhanced runAirportManagement function
-    void runAirportManagement() {
+    void runAirportManagement(Airport airports[]) {
         clearScreen();
-        Airport airports[20];
         Airport obj;
 
         
@@ -295,7 +294,6 @@ public:
             std::cout << " [3] Delete Airport\n";
             std::cout << " [4] Search Airport\n";
             std::cout << " [5] Display All Airports\n";
-            std::cout << " [6] Display Hash Table Structure\n";
             std::cout << " [0] Back to Main Menu\n";
             std::cout << "-----------------------------------------\n";
             std::cout << " Enter your option: ";
@@ -333,43 +331,12 @@ public:
                     obj.displayAllAirports(airports);
                     break;
                 }
-                case 6: {
-                    obj.displayHashTableStructure(airports);
-                    break;
-                }
                 case 0: return;
                 default: std::cout << "Invalid option.\n";
             }
         }
     }
-
-    // Bonus: Display hash table structure for educational purposes
-    void displayHashTableStructure(Airport airports[]) {
-        std::cout << "\n=== HASH TABLE STRUCTURE ===\n";
-        std::cout << "+-----+---------------------------------------------------+\n";
-        std::cout << "| " << std::left << std::setw(3) << "Idx" 
-                  << " | " << std::setw(30) << "Airport Data" 
-                  << " | " << std::setw(8) << "Status" << " |\n";
-        std::cout << "+-----+---------------------------------------------------+\n";
-        
-        for (int i = 0; i < 20; i++) {
-            std::cout << "| " << std::setw(3) << i << " | ";
-            
-            if (airports[i].status == 1) {
-                std::string airportInfo = std::string(airports[i].name) + " (" + airports[i].code + ")";
-                std::cout << std::setw(30) << airportInfo << " | " << std::setw(8) << "Active" << " |";
-            } else if (airports[i].status == -2) {
-                std::cout << std::setw(30) << "DELETED" << " | " << std::setw(8) << "Tombstone" << " |";
-            } else {
-                std::cout << std::setw(30) << "EMPTY" << " | " << std::setw(8) << "Empty" << " |";
-            }
-            std::cout << "\n";
-        }
-        std::cout << "+-----+---------------------------------------------------+\n";
-        
-        std::cout << "\nHash Function: sum(ASCII of code) % 20\n";
-        std::cout << "Collision Resolution: Linear Probing\n";
-    }
+    
 };
 
 #endif

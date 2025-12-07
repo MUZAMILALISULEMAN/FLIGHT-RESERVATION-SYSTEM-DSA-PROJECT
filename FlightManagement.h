@@ -21,13 +21,14 @@ public:
             : flightId(id), airline(air), departureCity(dep), 
               arrivalCity(arr), distance(dist), price(p) {}
     };
-
-private:
     struct Node {
         Flight data;
         Node* next;
         Node(const Flight& f) : data(f), next(nullptr) {}
     };
+
+private:
+    
 
     Node* head;
     int nextFlightId;
@@ -142,11 +143,11 @@ public:
         airline = trim(airline);
         if (airline.empty()) airline = "Unknown";
 
-        std::cout << "Departure city: ";
+        std::cout << "Departure city Code: ";
         std::getline(std::cin, dep);
         dep = trim(dep);
 
-        std::cout << "Arrival city: ";
+        std::cout << "Arrival city Code: ";
         std::getline(std::cin, arr);
         arr = trim(arr);
 
@@ -242,8 +243,8 @@ public:
 
         std::cout << "\nUpdating Flight " << flightId << ":\n";
         std::cout << "1. Airline (" << flight.airline << ")\n";
-        std::cout << "2. Departure City (" << flight.departureCity << ")\n";
-        std::cout << "3. Arrival City (" << flight.arrivalCity << ")\n";
+        std::cout << "2. Departure City Code (" << flight.departureCity << ")\n";
+        std::cout << "3. Arrival City Code (" << flight.arrivalCity << ")\n";
         std::cout << "4. Distance (" << flight.distance << ")\n";
         std::cout << "5. Price (" << flight.price << ")\n";
         std::cout << "0. Cancel Update\n";
@@ -268,13 +269,13 @@ public:
                 break;
             }
             case 2: {
-                std::cout << "Enter new departure city: ";
+                std::cout << "Enter new departure city code: ";
                 std::getline(std::cin, flight.departureCity);
                 flight.departureCity = trim(flight.departureCity);
                 break;
             }
             case 3: {
-                std::cout << "Enter new arrival city: ";
+                std::cout << "Enter new arrival city code: ";
                 std::getline(std::cin, flight.arrivalCity);
                 flight.arrivalCity = trim(flight.arrivalCity);
                 break;
@@ -393,7 +394,7 @@ public:
             return;
         }
 
-        std::cout << "Enter departure city to search: ";
+        std::cout << "Enter departure city code to search: ";
         std::string city;
         std::getline(std::cin, city);
         city = trim(city);

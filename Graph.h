@@ -3,62 +3,27 @@
 
 #include <iostream>
 #include <string>
+#include <iomanip>
+#include <vector>
+#include <limits>
+#include <algorithm>
+#include "flightmanagement.h"
+#include "airport.h"
 
-// Forward declarations to avoid circular includes
-class FlightManagement;
-class Airport;
 
-struct GraphEdge {
-    std::string to;
-    std::string flightName;
-    int cost;
-    GraphEdge* next;
-    
-    GraphEdge(const std::string& t, const std::string& name, int c) 
-        : to(t), flightName(name), cost(c), next(nullptr) {}
-};
-
-struct GraphNode {
-    std::string airport;
-    GraphEdge* edges;
-    GraphNode* next;
-    
-    GraphNode(const std::string& air) : airport(air), edges(nullptr), next(nullptr) {}
-};
 
 class Graph {
 private:
-    GraphNode* head;
-    const int INF = 1000000000;
-
-    GraphNode* findOrCreateNode(const std::string& airport) {
-        GraphNode* current = head;
-        while (current != nullptr) {
-            if (current->airport == airport) return current;
-            current = current->next;
-        }
-        
-        GraphNode* newNode = new GraphNode(airport);
-        newNode->next = head;
-        head = newNode;
-        return newNode;
-    }
-
-    GraphNode* findNode(const std::string& airport) {
-        GraphNode* current = head;
-        while (current != nullptr) {
-            if (current->airport == airport) return current;
-            current = current->next;
-        }
-        return nullptr;
-    }
-
-    void addEdgeToNode(GraphNode* node, const std::string& to, const std::string& flightName, int cost) {
-        GraphEdge* newEdge = new GraphEdge(to, flightName, cost);
-        newEdge->next = node->edges;
-        node->edges = newEdge;
-    }
-
+    static const int MAX_AIRPORTS = 20;
+    static const int INF = 999999;
+    
+    // Adjacency matrix: matrix[i][j] = distance between airport i and j
+    int matrix[MAX_AIRPORTS][MAX_AIRPORTS];
+    
+    // Airport names/codes from FlightManagement data
+    std::string airportNames[MAX_AIRPORTS];
+    int airportCount;
+    
     void clearScreen() {
         #ifdef _WIN32
             system("cls");
@@ -66,259 +31,424 @@ private:
             system("clear");
         #endif
     }
-
+    
     void pressEnterToContinue() {
         std::cout << "\nPress Enter to continue...";
         std::cin.ignore();
         std::cin.get();
     }
 
-public:
-    Graph() : head(nullptr) {}
-
-    ~Graph() {
-        GraphNode* current = head;
-        while (current != nullptr) {
-            GraphEdge* edge = current->edges;
-            while (edge != nullptr) {
-                GraphEdge* nextEdge = edge->next;
-                delete edge;
-                edge = nextEdge;
+  
+    
+    // Find airport index by code
+    int findAirportIndex(const std::string& code) {
+        for (int i = 0; i < airportCount; i++) {
+            if (airportNames[i] == code) {
+                return i;
             }
-            GraphNode* nextNode = current->next;
-            delete current;
-            current = nextNode;
         }
+        return -1;
     }
-
-    // NEW: Populate graph from FlightManagement data
-    void populateFromFlightManagement(const FlightManagement& flightMgmt);
-
-    // NEW: Populate graph from both FlightManagement and Airport data
-    void populateFromBothSystems(const FlightManagement& flightMgmt, const Airport& airportMgmt);
-
-    // Get all airport codes from the graph (for validation)
-    void getAllAirportCodes(std::string airports[], int& count) {
-        count = 0;
-        GraphNode* current = head;
-        while (current != nullptr && count < 50) {
-            airports[count++] = current->airport;
-            current = current->next;
-        }
-    }
-
-    // Manual flight addition (keep for testing)
-    void addFlight(const std::string& from, const std::string& to, const std::string& flightName, int cost) {
-        GraphNode* fromNode = findOrCreateNode(from);
-        addEdgeToNode(fromNode, to, flightName, cost);
-        findOrCreateNode(to);
-    }
-
-    void findShortestPath(const std::string& start, const std::string& end) {
-        if (findNode(start) == nullptr || findNode(end) == nullptr) {
-            std::cout << "Error: Airport not found in graph!\n";
-            return;
-        }
-
-        int nodeCount = 0;
-        GraphNode* temp = head;
-        while (temp != nullptr) {
-            nodeCount++;
-            temp = temp->next;
-        }
-
-        std::string* airports = new std::string[nodeCount];
-        int* distance = new int[nodeCount];
-        std::string* previous = new std::string[nodeCount];
-        bool* visited = new bool[nodeCount];
-
-        temp = head;
-        for (int i = 0; i < nodeCount; i++) {
-            airports[i] = temp->airport;
-            distance[i] = INF;
-            previous[i] = "";
-            visited[i] = false;
-            temp = temp->next;
-        }
-
-        int startIndex = -1;
-        for (int i = 0; i < nodeCount; i++) {
-            if (airports[i] == start) {
-                startIndex = i;
-                break;
-            }
-        }
-
-        if (startIndex == -1) {
-            std::cout << "Start airport not found!\n";
-            delete[] airports; delete[] distance; delete[] previous; delete[] visited;
-            return;
-        }
-
-        distance[startIndex] = 0;
-
-        for (int count = 0; count < nodeCount - 1; count++) {
-            int minDistance = INF;
-            int minIndex = -1;
-
-            for (int i = 0; i < nodeCount; i++) {
-                if (!visited[i] && distance[i] < minDistance) {
-                    minDistance = distance[i];
-                    minIndex = i;
-                }
-            }
-
-            if (minIndex == -1) break;
-
-            visited[minIndex] = true;
-
-            GraphNode* currentNode = findNode(airports[minIndex]);
-            GraphEdge* edge = currentNode->edges;
-            
-            while (edge != nullptr) {
-                int neighborIndex = -1;
-                for (int i = 0; i < nodeCount; i++) {
-                    if (airports[i] == edge->to) {
-                        neighborIndex = i;
-                        break;
-                    }
-                }
-
-                if (neighborIndex != -1 && !visited[neighborIndex]) {
-                    int newDist = distance[minIndex] + edge->cost;
-                    if (newDist < distance[neighborIndex]) {
-                        distance[neighborIndex] = newDist;
-                        previous[neighborIndex] = airports[minIndex];
-                    }
-                }
-                edge = edge->next;
-            }
-        }
-
-        int endIndex = -1;
-        for (int i = 0; i < nodeCount; i++) {
-            if (airports[i] == end) {
-                endIndex = i;
-                break;
-            }
-        }
-
-        if (endIndex == -1 || distance[endIndex] == INF) {
-            std::cout << "No path exists between " << start << " and " << end << "!\n";
-        } else {
-            std::cout << "\n Shortest Path Found!\n";
-            std::cout << "Route: ";
-            
-            std::string path[20];
-            int pathSize = 0;
-            std::string current = end;
-            
-            while (current != start) {
-                path[pathSize++] = current;
-                for (int i = 0; i < nodeCount; i++) {
-                    if (airports[i] == current) {
-                        current = previous[i];
-                        break;
-                    }
-                }
-            }
-            path[pathSize++] = start;
-
-            for (int i = pathSize - 1; i >= 0; i--) {
-                std::cout << path[i];
-                if (i > 0) std::cout << " → ";
-            }
-            
-            std::cout << "\nTotal Cost: $" << distance[endIndex] << std::endl;
-        }
-
-        delete[] airports; delete[] distance; delete[] previous; delete[] visited;
-    }
-
-    void displayGraph() {
-        if (head == nullptr) {
-            std::cout << "Graph is empty! No flights available.\n";
-            return;
-        }
-
-        std::cout << "\n=== Flight Network Graph ===\n";
-        GraphNode* current = head;
-        int flightCount = 0;
+    
+    // Add airport if not exists
+    int addAirport(const std::string& code) {
+        int idx = findAirportIndex(code);
+        if (idx != -1) return idx;
         
-        while (current != nullptr) {
-            std::cout << current->airport << " -> ";
-            GraphEdge* edge = current->edges;
-            
-            if (edge == nullptr) {
-                std::cout << "No connections";
-            } else {
-                while (edge != nullptr) {
-                    std::cout << edge->to << "(" << edge->flightName << ",$" << edge->cost << ") ";
-                    edge = edge->next;
-                    flightCount++;
-                }
-            }
-            std::cout << std::endl;
-            current = current->next;
+        if (airportCount >= MAX_AIRPORTS) {
+            std::cout << "Maximum airports reached!\n";
+            return -1;
         }
-        std::cout << "Total flights in graph: " << flightCount << std::endl;
+        
+        airportNames[airportCount] = code;
+        airportCount++;
+        return airportCount - 1;
     }
 
-    void runRouteOptimization() {
+public:
+    Graph() : airportCount(0) {
+        // Initialize matrix with INF (no connection)
+        for (int i = 0; i < MAX_AIRPORTS; i++) {
+            for (int j = 0; j < MAX_AIRPORTS; j++) {
+                matrix[i][j] = INF;
+            }
+            matrix[i][i] = 0; // Distance to itself is 0
+        }
+    }
+    
+    // Populate graph ONLY from FlightManagement system
+    void populateFromFlights(const FlightManagement& flightMgmt) {
+        FlightManagement::Node* flightNode = flightMgmt.getHead();
+        int addedCount = 0;
+        
+        // Clear existing data
+        airportCount = 0;
+        for (int i = 0; i < MAX_AIRPORTS; i++) {
+            for (int j = 0; j < MAX_AIRPORTS; j++) {
+                matrix[i][j] = INF;
+            }
+            matrix[i][i] = 0;
+        }
+        
+        if (flightNode == nullptr) {
+            std::cout << "No flights found in FlightManagement system!\n";
+            return;
+        }
+        
+        while (flightNode != nullptr) {
+            const FlightManagement::Flight& flight = flightNode->data;
+            
+            // Get or add airport indices
+            int fromIdx = addAirport(flight.departureCity);
+            int toIdx = addAirport(flight.arrivalCity);
+            
+            if (fromIdx != -1 && toIdx != -1) {
+                int distance = static_cast<int>(flight.distance);
+                
+                // Add bidirectional connection
+                matrix[fromIdx][toIdx] = distance;
+                matrix[toIdx][fromIdx] = distance;
+                addedCount++;
+            }
+            
+            flightNode = flightNode->next;
+        }
+        
+        std::cout << "\nGraph populated successfully!\n";
+        std::cout << "   Flights loaded: " << addedCount << "\n";
+        std::cout << "   Airports added: " << airportCount << "\n";
+    }
+    
+    // Populate from both systems (FlightManagement + Airport validation)
+    void populateFromBothSystems(const FlightManagement& flightMgmt, Airport airports[]) {
+        // Clear existing data
+        airportCount = 0;
+        for (int i = 0; i < MAX_AIRPORTS; i++) {
+            for (int j = 0; j < MAX_AIRPORTS; j++) {
+                matrix[i][j] = INF;
+            }
+            matrix[i][i] = 0;
+        }
+        
+        // First, add all valid airports from Airport system
+        for (int i = 0; i < 20; i++) {
+            if (airports[i].status == 1) { // Active airport
+                addAirport(airports[i].code);
+            }
+        }
+        
+        // Then add flights from FlightManagement
+        FlightManagement::Node* flightNode = flightMgmt.getHead();
+        int addedCount = 0;
+        int skippedCount = 0;
+        
+        if (flightNode == nullptr) {
+            std::cout << "No flights found in FlightManagement system!\n";
+            return;
+        }
+        
+        while (flightNode != nullptr) {
+            const FlightManagement::Flight& flight = flightNode->data;
+            
+            int fromIdx = findAirportIndex(flight.departureCity);
+
+            int toIdx = findAirportIndex(flight.arrivalCity);
+            
+            if (fromIdx != -1 && toIdx != -1) {
+                int distance = static_cast<int>(flight.distance);
+                matrix[fromIdx][toIdx] = distance;
+                matrix[toIdx][fromIdx] = distance;
+                addedCount++;
+            } else {
+                std::cout<<fromIdx<<" ";
+                skippedCount++;
+            }
+            
+            flightNode = flightNode->next;
+        }
+        
+        std::cout << "\nGraph populated from both systems!\n";
+        std::cout << "   Valid flight connections: " << addedCount << "\n";
+        std::cout << "   Skipped flights (invalid airports): " << skippedCount << "\n";
+        std::cout << "   Total airports in graph: " << airportCount << "\n";
+    }
+    
+    // Dijkstra's algorithm for shortest path
+    void findShortestPath(const std::string& start, const std::string& end) {
+        if (airportCount == 0) {
+            std::cout << "Graph is empty! Please load flights first.\n";
+            return;
+        }
+        
+        int startIdx = findAirportIndex(start);
+        int endIdx = findAirportIndex(end);
+        
+        if (startIdx == -1) {
+            std::cout << "Airport '" << start << "' not found in graph!\n";
+            return;
+        }
+        
+        if (endIdx == -1) {
+            std::cout << "Airport " << end << "' not found in graph!\n";
+            return;
+        }
+        
+        if (startIdx == endIdx) {
+            std::cout << "Start and end airports are the same!\n";
+            return;
+        }
+        
+        // Dijkstra's algorithm
+        int dist[MAX_AIRPORTS];
+        bool visited[MAX_AIRPORTS];
+        int prev[MAX_AIRPORTS];
+        
+        for (int i = 0; i < airportCount; i++) {
+            dist[i] = INF;
+            visited[i] = false;
+            prev[i] = -1;
+        }
+        
+        dist[startIdx] = 0;
+        
+        for (int count = 0; count < airportCount - 1; count++) {
+            // Find unvisited vertex with minimum distance
+            int minDist = INF;
+            int minIdx = -1;
+            
+            for (int i = 0; i < airportCount; i++) {
+                if (!visited[i] && dist[i] < minDist) {
+                    minDist = dist[i];
+                    minIdx = i;
+                }
+            }
+            
+            if (minIdx == -1 || minIdx == endIdx) break;
+            
+            visited[minIdx] = true;
+            
+            // Update distances of adjacent vertices
+            for (int i = 0; i < airportCount; i++) {
+                if (!visited[i] && matrix[minIdx][i] != INF) {
+                    int newDist = dist[minIdx] + matrix[minIdx][i];
+                    if (newDist < dist[i]) {
+                        dist[i] = newDist;
+                        prev[i] = minIdx;
+                    }
+                }
+            }
+        }
+        
+        // Check if path exists
+        if (dist[endIdx] == INF) {
+            std::cout << "No flight path exists between " << start << " and " << end << "!\n";
+            return;
+        }
+        
+        // Reconstruct path
+        std::vector<std::string> path;
+        int current = endIdx;
+        
+        while (current != -1) {
+            path.push_back(airportNames[current]);
+            current = prev[current];
+        }
+        
+        reverse(path.begin(), path.end());
+        
+        // Display result
+        std::cout << "\n\n";
+        std::cout << "         SHORTEST PATH FOUND            \n";
+        std::cout << "\n";
+        std::cout << "   From: " << start << "\n";
+        std::cout << "     To: " << end << "\n";
+        std::cout << "\n";
+        std::cout << "   Route: ";
+        
+        for (size_t i = 0; i < path.size(); i++) {
+            std::cout << path[i];
+            if (i < path.size() - 1) std::cout << " -> ";
+        }
+        
+        std::cout << "\n\n   Total Distance: " << dist[endIdx] << " km\n";
+        std::cout << "   Total Stops: " << path.size() - 2 << "\n";
+        std::cout << "\n";
+    }
+    
+    // Display flight connections
+    void displayConnections() {
+        if (airportCount == 0) {
+            std::cout << "Graph is empty! No flights loaded.\n";
+            return;
+        }
+        
+        std::cout << "\n\n";
+        std::cout << "        FLIGHT CONNECTIONS              \n";
+        std::cout << "\n";
+        
+        int totalConnections = 0;
+        
+        for (int i = 0; i < airportCount; i++) {
+            std::cout << "\n   " << airportNames[i] << ":\n";
+            bool hasConnections = false;
+            
+            for (int j = 0; j < airportCount; j++) {
+                if (i != j && matrix[i][j] != INF) {
+                    std::cout << "     ->" << airportNames[j] 
+                              << " (" << matrix[i][j] << " km)\n";
+                    hasConnections = true;
+                    totalConnections++;
+                }
+            }
+            
+            if (!hasConnections) {
+                std::cout << "     No direct flights\n";
+            }
+        }
+        
+        std::cout << "\n\n";
+        std::cout << "   Total Airports: " << airportCount << "\n";
+        std::cout << "   Total Connections: " << totalConnections/2 << "\n";
+    }
+    
+    // Display adjacency matrix
+    void displayMatrix() {
+        if (airportCount == 0) {
+            std::cout << "Graph is empty! No flights loaded.\n";
+            return;
+        }
+        
+        std::cout << "\n\n";
+        std::cout << "        ADJACENCY MATRIX                \n";
+        std::cout << "\n\n";
+        
+        // Print header
+        std::cout << std::setw(10) << " ";
+        for (int i = 0; i < airportCount; i++) {
+            std::cout << std::setw(6) << airportNames[i];
+        }
+        std::cout << "\n";
+        
+        // Print matrix
+        for (int i = 0; i < airportCount; i++) {
+            std::cout << std::setw(10) << airportNames[i];
+            for (int j = 0; j < airportCount; j++) {
+                if (matrix[i][j] == INF) {
+                    std::cout << std::setw(6) << "INF";
+                } else if (matrix[i][j] == 0) {
+                    std::cout << std::setw(6) << "0";
+                } else {
+                    std::cout << std::setw(6) << matrix[i][j];
+                }
+            }
+            std::cout << "\n";
+        }
+        
+        std::cout << "\nLegend: INF = No direct connection\n";
+        std::cout << "        Numbers = Distance in km\n";
+    }
+    
+    // Show all airports
+    void showAirports() {
+        if (airportCount == 0) {
+            std::cout << "Graph is empty! No flights loaded.\n";
+            return;
+        }
+        
+        std::cout << "\n\n";
+        std::cout << "        AVAILABLE AIRPORTS              \n";
+        std::cout << "\n\n";
+        
+        for (int i = 0; i < airportCount; i++) {
+            std::cout << "   [" << i + 1 << "] " << airportNames[i] << "\n";
+        }
+        
+        std::cout << "\n\n";
+        std::cout << "   Total: " << airportCount << " airports\n";
+    }
+    
+    // Clear graph
+    void clearGraph() {
+        airportCount = 0;
+        for (int i = 0; i < MAX_AIRPORTS; i++) {
+            for (int j = 0; j < MAX_AIRPORTS; j++) {
+                matrix[i][j] = INF;
+            }
+        }
+        std::cout << "Graph cleared successfully!\n";
+    }
+    
+    // Main menu for route optimization
+    void runRouteOptimization(FlightManagement& flightMgmt, Airport airports[]) {
         clearScreen();
-        std::cout << "=========================================\n";
-        std::cout << "      ROUTE OPTIMIZATION (Graph)        \n";
-        std::cout << "=========================================\n";
-
+        
         while (true) {
-            std::cout << " [1] Find Shortest Path\n";
-            std::cout << " [2] Display Flight Network\n";
-            std::cout << " [3] Show Available Airports\n";
-            std::cout << " [0] Back to Main Menu\n";
-            std::cout << "-----------------------------------------\n";
-            std::cout << " Enter your option: ";
-
+            std::cout << "\n";
+            std::cout << "     ROUTE OPTIMIZATION SYSTEM          \n";
+            std::cout << "      (Adjacency Matrix + Dijkstra)     \n";
+            std::cout << "\n";
+            std::cout << "   [1] Load Data\n";
+            std::cout << "   [2] Find Shortest Path (Dijkstra)\n";
+            std::cout << "   [3] Display Flight Connections\n";
+            std::cout << "   [4] Display Adjacency Matrix\n";
+            std::cout << "   [5] Show All Airports\n";
+            std::cout << "   [6] Clear Graph Data\n";
+            std::cout << "   [0] Back to Main Menu\n";
+            std::cout << "\n";
+            std::cout << "   Current: " << airportCount << " airports in graph\n";
+            std::cout << "   Enter choice: ";
+            
             int choice;
             std::cin >> choice;
             std::cin.ignore();
-
+            
             switch (choice) {
-                case 1: {
+                    
+                case 1:
+                    populateFromBothSystems(flightMgmt, airports);
+                    pressEnterToContinue();
+                    break;
+                    
+                case 2: {
                     std::string start, end;
-                    std::cout << "Enter start airport: ";
+                    std::cout << "Enter start airport code: ";
                     std::getline(std::cin, start);
-                    std::cout << "Enter destination airport: ";
+                    std::cout << "Enter destination airport code: ";
                     std::getline(std::cin, end);
                     findShortestPath(start, end);
                     pressEnterToContinue();
                     break;
                 }
-                case 2: {
-                    displayGraph();
-                    pressEnterToContinue();
-                    break;
-                }
-                case 3: {
-                    std::string airports[50];
-                    int count = 0;
-                    getAllAirportCodes(airports, count);
                     
-                    std::cout << "\nAvailable Airports (" << count << "): ";
-                    for (int i = 0; i < count; i++) {
-                        std::cout << airports[i];
-                        if (i < count - 1) std::cout << ", ";
-                    }
-                    std::cout << std::endl;
+                case 3:
+                    displayConnections();
                     pressEnterToContinue();
                     break;
-                }
-                case 0: return;
-                default: std::cout << "Invalid option!\n"; pressEnterToContinue();
+                    
+                case 4:
+                    displayMatrix();
+                    pressEnterToContinue();
+                    break;
+                    
+                case 5:
+                    showAirports();
+                    pressEnterToContinue();
+                    break;
+                    
+                case 6:
+                    clearGraph();
+                    pressEnterToContinue();
+                    break;
+                    
+                case 0:
+                    return;
+                    
+                default:
+                    std::cout << "Invalid choice!\n";
+                    pressEnterToContinue();
             }
+            
             clearScreen();
-            std::cout << "=========================================\n";
-            std::cout << "      ROUTE OPTIMIZATION (Graph)        \n";
-            std::cout << "=========================================\n";
         }
     }
 };
