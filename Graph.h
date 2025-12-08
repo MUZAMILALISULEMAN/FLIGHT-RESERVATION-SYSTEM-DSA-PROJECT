@@ -157,7 +157,6 @@ public:
             if (fromIdx != -1 && toIdx != -1) {
                 int distance = static_cast<int>(flight.distance);
                 matrix[fromIdx][toIdx] = distance;
-                matrix[toIdx][fromIdx] = distance;
                 addedCount++;
             } else {
                 std::cout<<fromIdx<<" ";
